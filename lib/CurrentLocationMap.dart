@@ -21,8 +21,79 @@ class _CurrentLocationMapState extends State<CurrentLocationMap> {
   LatLng? myself;
   //
   final markerId=MarkerId("Samin");
-// Initial Location
+  // Initial Location
   @override
+  void initState(){
+    super.initState();
+    initLocation();
+  }
+
+
+
+  Future<void> initLocation()  async {
+
+
+    // 01 Permission Manage
+    LocationPermission permission=await Geolocator.checkPermission();
+    if(permission==LocationPermission.denied){
+      permission=await Geolocator.requestPermission();
+    }
+
+    if(permission==LocationPermission.denied || permission==LocationPermission.deniedForever){
+      ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text("Location Permission Misssing"))
+      );
+      return;
+    }
+
+    // 02 Ensure Location Services On
+    final enabled=await Geolocator.isLocationServiceEnabled();
+    if(!enabled){
+      ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text("Please Enable Location Services"))
+      );
+      return;
+    }
+
+    // 03 Intial Position
+
+    final pos= await Geolocator.getCurrentPosition(desiredAccuracy: LocationAccuracy.best);
+    updatePosition(pos);
+
+
+
+    // Stream updates
+    sub?.cancel();
+    sub=Geolocator.getPositionStream(
+      locationSettings: const LocationSettings(
+          accuracy: LocationAccuracy.best,
+          distanceFilter: 5
+      ),
+    ).listen((p)=>updatePosition(p));
+
+
+  }
+
+
+  // Update Position
+
+  void  updatePosition(Position p){
+    final here = LatLng(p.latitude, p.longitude);
+    setState(() {
+      myself=here;
+    });
+    animateTo(here);
+  }
+
+
+  Future<void>  animateTo(LatLng target) async{
+    if(map==null) return;
+    await map!.animateCamera(
+        CameraUpdate.newCameraPosition(
+            CameraPosition(target: target,zoom: 14)
+        )
+    );
+  }
 
 
 
